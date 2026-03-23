@@ -1,0 +1,179 @@
+@startuml Personal-DJ Class Diagram
+
+title Personal DJ — Phase 1 Class Diagram
+
+' ─────────────────────────────────────────
+' Domain Entities
+' ─────────────────────────────────────────
+package "com.personaldj.domain.entity" {
+
+    class User {
+        - Long id
+        - String username
+        - String email
+        - String passwordHash
+        + List<DjSession> sessions
+        + List<Playlist> playlists
+    }
+
+    class Track {
+        - Long id
+        - String spotifyId
+        - String title
+        - String artist
+        - String album
+        - int durationMs
+    }
+
+    class AudioFeatures {
+        - Long id
+        - double energy
+        - double valence
+        - double danceability
+        - double tempo
+        - double acousticness
+    }
+
+    class Playlist {
+        - Long id
+        - String name
+        - String description
+        + List<Track> tracks
+    }
+
+    class DjSession {
+        - Long id
+        - String mood
+        - LocalDateTime startedAt
+        - LocalDateTime endedAt
+        + List<Rule> rules
+    }
+
+    class Rule {
+        - Long id
+        - RuleType type
+        - String description
+        - String configJson
+    }
+
+    class UserFeedback {
+        - Long id
+        - String feedbackType
+        - LocalDateTime recordedAt
+    }
+}
+
+package "com.personaldj.domain.enums" {
+    enum RuleType {
+        MOOD_MATCH
+        AVOID_REPEAT_ARTIST
+    }
+}
+
+' ─────────────────────────────────────────
+' Relationships
+' ─────────────────────────────────────────
+User "1" --> "*" DjSession : has
+User "1" --> "*" Playlist : owns
+Track "1" --> "0..1" AudioFeatures : has
+Playlist "*" --> "*" Track : contains
+DjSession "*" --> "*" Rule : applies
+UserFeedback "*" --> "1" Track : references
+UserFeedback "*" --> "1" DjSession : belongsTo
+Rule --> RuleType : typed by
+
+' ─────────────────────────────────────────
+' Factory Pattern
+' ─────────────────────────────────────────
+package "com.personaldj.engine.factory" {
+    class RuleFactory <<Factory>> {
+        + Rule create(RuleType type)
+        - Rule buildRule(RuleType type, String description)
+    }
+}
+
+RuleFactory ..> Rule : creates
+RuleFactory ..> RuleType : uses
+
+' ─────────────────────────────────────────
+' Observer Pattern
+' ─────────────────────────────────────────
+package "com.personaldj.engine.observer.event" {
+    class FeedbackReceivedEvent {
+        - UserFeedback feedback
+        + UserFeedback getFeedback()
+    }
+
+    class SessionStartedEvent {
+        - DjSession session
+        + DjSession getSession()
+    }
+}
+
+package "com.personaldj.engine.observer.listener" {
+    class FeedbackEventListener <<EventListener>> {
+        + void onFeedbackReceived(FeedbackReceivedEvent)
+    }
+
+    class SessionEventListener <<EventListener>> {
+        + void onSessionStarted(SessionStartedEvent)
+    }
+}
+
+FeedbackEventListener ..> FeedbackReceivedEvent : listens to
+SessionEventListener ..> SessionStartedEvent : listens to
+FeedbackReceivedEvent --> UserFeedback
+SessionStartedEvent --> DjSession
+
+' ─────────────────────────────────────────
+' Strategy Pattern
+' ─────────────────────────────────────────
+package "com.personaldj.engine.strategy" {
+    interface ScoringStrategy <<Strategy>> {
+        + double score(Track candidate, DjSession session)
+    }
+
+    class EnergyMatchStrategy {
+        + double score(Track candidate, DjSession session)
+    }
+
+    class MoodMatchStrategy {
+        + double score(Track candidate, DjSession session)
+    }
+
+    class GenreAffinityStrategy {
+        + double score(Track candidate, DjSession session)
+    }
+}
+
+EnergyMatchStrategy ..|> ScoringStrategy
+MoodMatchStrategy ..|> ScoringStrategy
+GenreAffinityStrategy ..|> ScoringStrategy
+
+' ─────────────────────────────────────────
+' Repositories (Provider Layer)
+' ─────────────────────────────────────────
+package "com.personaldj.provider.repository" {
+    interface UserRepository
+    interface TrackRepository
+    interface PlaylistRepository
+    interface DjSessionRepository
+    interface RuleRepository
+    interface UserFeedbackRepository
+}
+
+' ─────────────────────────────────────────
+' Service Layer
+' ─────────────────────────────────────────
+package "com.personaldj.session.service" {
+    class DjSessionService {
+        + DjSession startSession(User user, String mood)
+        + void endSession(Long sessionId)
+        + List<DjSession> getSessionsForUser(Long userId)
+    }
+}
+
+DjSessionService --> DjSessionRepository : uses
+DjSessionService ..> SessionStartedEvent : publishes
+
+@enduml

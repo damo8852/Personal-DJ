@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle}">Personal DJ — Home</title>
+</head>
+<body>
+    <nav>
+        <a href="/home">Home</a> |
+        <a href="/library">Library</a> |
+        <a href="/session">Session</a>
+    </nav>
+
+    <h1>Welcome to Personal DJ</h1>
+    <p>Your mood-based music recommendation engine.</p>
+
+    <section>
+        <h2>Start a Session</h2>
+        <p>Select a mood and let Personal DJ build your queue.</p>
+        <a href="/session">Start Session</a>
+    </section>
+</body>
+</html>
